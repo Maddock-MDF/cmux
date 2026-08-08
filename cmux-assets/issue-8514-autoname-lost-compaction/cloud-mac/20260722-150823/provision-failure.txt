@@ -1,0 +1,12 @@
+Cloud Mac provisioning diagnostic
+
+Run: https://github.com/manaflow-ai/cmux-loader/actions/runs/29961809925
+Requested host: cmux-loader-29961809925
+Requested GUI mode: yes
+Tailnet DNS suffix: tail137216.ts.net
+Result: The runner completed GUI/CUA preparation and reached the external hold step, but the local provisioner timed out after 900 seconds waiting for the Tailscale device.
+Local tailnet lookup: no matching peer was visible through Tailscale status or DNS.
+Fleet lookup: unavailable because no manaflow macfleet admin token is configured.
+GUI/CUA status: unreachable from the controlling Mac; bootstrap, recording, and screenshots were not attempted.
+Video result: unavailable because no SSH/CUA route to the disposable runner could be established.
+Cleanup: workflow cancellation requested after the bounded provision timeout.
