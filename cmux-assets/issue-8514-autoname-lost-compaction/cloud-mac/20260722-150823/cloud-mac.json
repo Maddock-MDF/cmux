@@ -1,0 +1,19 @@
+{
+  "run_url": "https://github.com/manaflow-ai/cmux-loader/actions/runs/29961809925",
+  "requested_host": "cmux-loader-29961809925",
+  "tailnet_dns_suffix": "tail137216.ts.net",
+  "gui": {
+    "ready": false,
+    "status": "unreachable_after_runner_setup"
+  },
+  "ssh": {
+    "ready": false,
+    "reason": "tailscale_device_not_visible_before_900_second_timeout"
+  },
+  "macfleet_admin_lookup": "unavailable_no_token",
+  "recording": {
+    "available": false,
+    "reason": "no_ssh_or_cua_route"
+  },
+  "cleanup": "workflow_cancellation_requested"
+}

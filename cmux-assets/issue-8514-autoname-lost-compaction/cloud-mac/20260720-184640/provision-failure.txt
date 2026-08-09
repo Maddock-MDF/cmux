@@ -1,0 +1,8 @@
+Cloud Mac provisioning diagnostic
+
+Run: https://github.com/manaflow-ai/cmux-loader/actions/runs/29794075805
+Requested host: cmux-loader-29794075805
+Result: The runner reached its external hold step, but the local provisioner timed out waiting for the Tailscale device.
+Local fleet lookup: unavailable because no manaflow macfleet token is configured.
+GUI/CUA status: not reached; no recording was possible.
+Cleanup: cancellation requested for the held workflow run.

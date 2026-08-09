@@ -1,0 +1,14 @@
+{"type":"user","message":{"content":"Investigate why an auto-generated title disappears after Claude compaction."}}
+{"type":"assistant","message":{"content":"I am tracing the Claude SessionStart compact lifecycle."}}
+{"type":"user","message":{"content":"Keep the topic-bearing title stable across compaction."}}
+{"type":"assistant","message":{"content":"I will preserve the existing auto title and its provenance."}}
+{"type":"user","message":{"content":"Manual workspace names must continue to win."}}
+{"type":"assistant","message":{"content":"Workspace and panel ownership will be checked independently."}}
+{"type":"user","message":{"content":"A stale finisher must not clear a newer reconciliation."}}
+{"type":"assistant","message":{"content":"The state transition uses generation compare-and-set ownership."}}
+{"type":"user","message":{"content":"Do not call the model again just to replay a stored title."}}
+{"type":"assistant","message":{"content":"The compact hook records a durable replay obligation."}}
+{"type":"user","message":{"content":"Repair the visible panel projection if it resets to Claude Code."}}
+{"type":"assistant","message":{"content":"An idempotent title apply repairs the derived tab chrome."}}
+{"type":"user","message":{"content":"Verify this through the tagged dev build."}}
+{"type":"assistant","message":{"content":"The final SHA will be exercised through the app socket and hook CLI."}}
