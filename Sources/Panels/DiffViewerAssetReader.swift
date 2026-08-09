@@ -3,48 +3,98 @@ import zlib
 
 /// Reads an allowlisted diff-viewer asset in chunks suitable for a URL scheme task.
 /// WebKit does not honor Content-Encoding for app-owned custom schemes, so `.deflate`
-/// assets must be inflated before they cross the scheme-handler boundary.
+/// assets must be inflated before they cross the scheme-handler boundary. One shared
+/// actor admits exactly one stream at a time so decoded bytes and file handles retain
+/// the same aggregate bound as the former serial stream queue.
 actor DiffViewerAssetReader {
     private static let maxInflatedSize = 32 * 1024 * 1024
 
-    private let fileURL: URL
-    private var decodedData: Data?
-    private var decodedOffset = 0
-    private var fileHandle: FileHandle?
+    private final class Stream {
+        let fileURL: URL
+        var decodedData: Data?
+        var decodedOffset = 0
+        var fileHandle: FileHandle?
 
-    init(fileURL: URL) {
-        self.fileURL = fileURL
-    }
-
-    func read(upToCount count: Int) throws -> Data {
-        try Task.checkCancellation()
-        try openIfNeeded()
-
-        if let decodedData {
-            guard decodedOffset < decodedData.count else { return Data() }
-            let end = min(decodedOffset + count, decodedData.count)
-            defer { decodedOffset = end }
-            return decodedData.subdata(in: decodedOffset..<end)
+        init(fileURL: URL) {
+            self.fileURL = fileURL
         }
-        return try fileHandle?.read(upToCount: count) ?? Data()
     }
 
-    func close() {
-        try? fileHandle?.close()
-        fileHandle = nil
+    private struct ActiveStream {
+        let id: UUID
+        let stream: Stream
+    }
+
+    private struct WaitingStream {
+        let id: UUID
+        let fileURL: URL
+        let continuation: CheckedContinuation<Void, Never>
+    }
+
+    private var activeStream: ActiveStream?
+    private var waitingStreams: [WaitingStream] = []
+
+    func read(streamID: UUID, fileURL: URL, upToCount count: Int) async throws -> Data {
+        if activeStream?.id != streamID {
+            await waitForTurn(streamID: streamID, fileURL: fileURL)
+        }
+        try Task.checkCancellation()
+        guard let activeStream, activeStream.id == streamID else {
+            throw CocoaError(.fileReadUnknown)
+        }
+        let stream = activeStream.stream
+        try openIfNeeded(stream)
+
+        if let decodedData = stream.decodedData {
+            guard stream.decodedOffset < decodedData.count else { return Data() }
+            let end = min(stream.decodedOffset + count, decodedData.count)
+            defer { stream.decodedOffset = end }
+            return decodedData.subdata(in: stream.decodedOffset..<end)
+        }
+        return try stream.fileHandle?.read(upToCount: count) ?? Data()
+    }
+
+    func close(streamID: UUID) {
+        guard let current = activeStream, current.id == streamID else { return }
+        try? current.stream.fileHandle?.close()
+        current.stream.fileHandle = nil
+        activeStream = nil
+        admitNextStream()
     }
 
     deinit {
-        try? fileHandle?.close()
+        try? activeStream?.stream.fileHandle?.close()
     }
 
-    private func openIfNeeded() throws {
-        guard decodedData == nil, fileHandle == nil else { return }
-        if fileURL.lastPathComponent.hasSuffix(".deflate") {
-            let compressed = try Data(contentsOf: fileURL, options: .mappedIfSafe)
-            decodedData = try Self.inflateZlib(compressed)
+    private func waitForTurn(streamID: UUID, fileURL: URL) async {
+        if activeStream == nil {
+            activeStream = ActiveStream(id: streamID, stream: Stream(fileURL: fileURL))
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            waitingStreams.append(WaitingStream(
+                id: streamID,
+                fileURL: fileURL,
+                continuation: continuation
+            ))
+        }
+    }
+
+    private func admitNextStream() {
+        guard !waitingStreams.isEmpty else { return }
+        let next = waitingStreams.removeFirst()
+        activeStream = ActiveStream(id: next.id, stream: Stream(fileURL: next.fileURL))
+        next.continuation.resume()
+    }
+
+    private func openIfNeeded(_ stream: Stream) throws {
+        guard stream.decodedData == nil, stream.fileHandle == nil else { return }
+        if stream.fileURL.lastPathComponent.hasSuffix(".deflate") {
+            let compressed = try Data(contentsOf: stream.fileURL, options: .mappedIfSafe)
+            stream.decodedData = try Self.inflateZlib(compressed)
         } else {
-            fileHandle = try FileHandle(forReadingFrom: fileURL)
+            stream.fileHandle = try FileHandle(forReadingFrom: stream.fileURL)
         }
     }
 
